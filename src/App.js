@@ -5,11 +5,13 @@ import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
 import CloudIcon from "@mui/icons-material/Cloud";
 import Button from "@mui/material/Button";
-import axios from "axios";
 import { useEffect, useState } from "react";
 import moment from "moment";
 import "moment/min/locales";
 import { useTranslation } from "react-i18next";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchWeather } from "./weatherApiSlice";
+import CircularProgress from "@mui/material/CircularProgress";
 moment.locale("ar");
 
 const theme = createTheme({
@@ -18,18 +20,17 @@ const theme = createTheme({
   },
 });
 
-let cancelAxios = null;
-
 function App() {
+  //Redux code
+  const dispatch = useDispatch();
+  const isLoading = useSelector((state) => {
+    return state.weather.isLoading;
+  });
+  const weather = useSelector((state) => {
+    return state.weather.weatherData;
+  });
   const [locale, setLocale] = useState("ar");
   const { t, i18n } = useTranslation();
-  const [temp, setTemp] = useState({
-    number: null,
-    description: "",
-    max: null,
-    min: null,
-    icon: null,
-  });
   const [dateAndTime, setDateAndTime] = useState("");
   function handleLanguageClick() {
     if (locale == "en") {
@@ -44,40 +45,10 @@ function App() {
     setDateAndTime(moment().format("MMMM Do YYYY, h:mm:ss a"));
   }
   useEffect(() => {
+    //trying Redux
+    dispatch(fetchWeather());
     i18n.changeLanguage(locale);
     setDateAndTime(moment().format("MMMM Do YYYY, h:mm:ss a"));
-    axios
-      .get(
-        "https://api.openweathermap.org/data/2.5/weather?lat=24.7&lon=46.7&appid=fc2c70f5fec25d21bddc342d084cc85a",
-        {
-          cancelToken: new axios.CancelToken((c) => {
-            cancelAxios = c;
-          }),
-        }
-      )
-      .then(function (response) {
-        // handle success
-        const responseTemp = Math.round(response.data.main.temp - 272.15);
-        const min = Math.round(response.data.main.temp_min - 272.15);
-        const max = Math.round(response.data.main.temp_max - 272.15);
-        const description = response.data.weather[0].description;
-        const responseIcon = response.data.weather[0].icon;
-        setTemp({
-          number: responseTemp,
-          description,
-          max,
-          min,
-          icon: `https://openweathermap.org/img/wn/${responseIcon}@2x.png`,
-        });
-      })
-      .catch(function (error) {
-        // handle error
-        console.log(error);
-      });
-    return () => {
-      console.log("canceling");
-      cancelAxios();
-    };
   }, []);
   return (
     <div className="App">
@@ -141,22 +112,29 @@ function App() {
                         justifyContent: "center",
                       }}
                     >
+                      {isLoading ? (
+                        <CircularProgress style={{ color: "white" }} />
+                      ) : (
+                        ""
+                      )}
                       <Typography variant="h2" style={{ textAlign: "right" }}>
-                        {temp.number}
+                        {weather.number}
                       </Typography>
-                      <img src={temp.icon} />
+                      <img src={weather.icon} />
                     </div>
                     {/* end temperature */}
-                    <Typography variant="h6">{t(temp.description)}</Typography>
+                    <Typography variant="h6">
+                      {t(weather.description)}
+                    </Typography>
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "cener",
+                        alignItems: "center",
                       }}
                     >
                       <h5>
-                        {t("min")}: {temp.min}
+                        {t("min")}: {weather.min}
                       </h5>
                       <h5
                         style={{
@@ -167,7 +145,7 @@ function App() {
                         |
                       </h5>
                       <h5>
-                        {t("max")}: {temp.max}
+                        {t("max")}: {weather.max}
                       </h5>
                     </div>
                   </div>
